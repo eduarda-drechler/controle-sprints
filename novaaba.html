@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Controle de Sprints</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #fff;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+  }
+  .logo-container {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .logo-container img {
+    max-width: 300px;
+    height: auto;
+  }
+  h1 {
+    color: #2B5676;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 2rem;
+  }
+  .controle-container {
+    max-width: 1500px;
+    margin: 0 auto 40px auto;
+    background: #fafafa;
+    padding: 30px 40px;
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgb(43 86 118 / 0.12);
+  }
+  .resumo-metricas {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+  .card-metrica {
+    flex: 1 1 220px;
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 5px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(43,86,118,0.08);
+    transition: box-shadow 0.3s ease;
+  }
+  .card-metrica:hover {
+    box-shadow:  2px 12px rgba(43,86,118,0.18);
+  }
+  .card-metrica h3 {
+    color: #2B5676;
+    margin-bottom: 8px;
+    font-size: 1.1rem;
+  }
+  .card-metrica div {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #444;
+  }
+  .filtros {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+    justify-content: center;
+  }
+  .filtros label {
+    color: #2B5676;
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    flex-direction: column;
+  }
+  .filtros select {
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1.5px solid #ccc;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    min-width: 140px;
+    transition: border-color 0.2s ease;
+  }
+  .filtros select:focus {
+    border-color: #2B5676;
+    outline: none;
+  }
+  canvas {
+    display: block;
+    max-width: 350px;
+    margin: 0 auto 40px auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgb(43 86 118 / 0.12);
+    background: #fff;
+  }
+  thead {
+    background-color: #2B5676;
+    color: #fff;
+  }
+  th, td {
+    text-align: left;
+    padding: 14px 16px;
+    font-size: 1rem;
+    border-bottom: 1px solid #eee;
+  }
+  tbody tr.concluida {
+    background: #d4edda;
+  }
+  tbody tr.em-andamento {
+    background: #fff3cd;
+  }
+  tbody tr.nao-iniciado {
+    background: #f8d7da;
+  }
+  tbody tr:hover {
+    background-color: #f1f9ff;
+    cursor: pointer;
+  }
+  .tab-content {
+    display: none;
+  }
+  .tab-content.active {
+    display: block;
+  }
+  .tab-button {
+    cursor: pointer;
+    padding: 8px 16px;
+    background: #2B5676;
+    color: white;
+    border: none;
+    margin-right: 8px;
+    border-radius: 6px 6px 0 0;
+  }
+  .tab-button.active {
+    background: #145374;
+  }
+
+  #tabelaRegistros .chamado {
+    width: 350px; /* valor aproximado, antes estava menor */
+  } 
+
+    /* Estilo para aceite "Não" */
+  #tabelaRegistros td.aceite-nao {
+    font-weight: 700;
+    color: red;
+  }
+
+</style>
+</head>
+<body>
+
+  <div id="sprintAtual" class="tab-content active controle-container">
+    <div class="logo-container">
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdzWaiEA5lnbIANMPdfX1fnBdx-5uRSMG0cA&s" alt="Logo Prefeitura" />
+    </div>
+    <h1>Controle de Sprints</h1>
+
+    <canvas id="graficoConcluido"></canvas>
+
+    <div class="resumo-metricas">
+      <div class="card-metrica">
+        <h3>Total de registros</h3>
+        <div id="totalRegistros">0</div>
+      </div>
+      <div class="card-metrica">
+        <h3>Total estimado</h3>
+        <div id="totalEstimado">0 PF</div>
+      </div>
+      <div class="card-metrica">
+        <h3>Concluído</h3>
+        <div id="totalConcluido">0 PF</div>
+      </div>
+      <div class="card-metrica">
+        <h3>Restante</h3>
+        <div id="totalRestante">0 PF</div>
+      </div>
+    </div>
+
+    <div class="filtros">
+      <label for="filtroSprint">Sprint:
+        <select id="filtroSprint"><option value="">Todas</option></select>
+      </label>     
+      <label for="filtroArea">Área:
+        <select id="filtroArea"><option value="">Todas</option></select>
+      </label>
+      <label for="filtroStatus">Status:
+        <select id="filtroStatus"><option value="">Todos</option></select>
+      </label>
+    </div>
+
+    <table id="tabelaRegistros">
+      <thead>
+        <tr>
+          <th>Área</th>
+          <th class="chamado">Chamado</th>
+          <th>Status</th>
+          <th>Sprint</th>
+          <th>Estimativa</th>
+          <th>Prazo</th>
+          <th>Responsável</th>
+          <th>Aceite</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="8" style="text-align:center;">Carregando dados...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+<div id="proximaSprint" class="tab-content controle-container">
+  <h2>Demandas para Análise da Próxima Sprint</h2>
+  <div class="filtros">
+    <label for="filtroSprintProx">Sprint:
+      <select id="filtroSprintProx"><option value="">Todas</option></select>
+    </label>
+  </div>
+  <table id="tabelaProximaSprint">
+    <thead>
+      <tr>
+        <th>Área</th>
+        <th>Chamado</th>
+        <th>Assunto</th>
+        <th>Requisitos</th>
+        <th>Solicitante</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="6" style="text-align:center;">Carregando dados...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div id="proximaSprint" class="tab-content controle-container">
+  <h2>Demandas para Análise da Próxima Sprint</h2>
+  <div class="filtros">
+    <label for="filtroSprintProx">Sprint:
+      <select id="filtroSprintProx"><option value="">Todas</option></select>
+    </label>
+  </div>
+  <table id="tabelaProximaSprint">
+    <thead>
+      <tr>
+        <th>Área</th>
+        <th>Chamado</th>
+        <th>Assunto</th>
+        <th>Requisitos</th>
+        <th>Solicitante</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="6" style="text-align:center;">Carregando dados...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzWwhGM6Y1a_aDGWyBIwG6tEs0jx3Mfb3QysY9M1y4dUlMEOd5NG5pPcmWcpBHKBkduCg/exec';
+
+  // Abas: alterna visibilidade
+  document.querySelectorAll('.tab-button').forEach(button => {
+    button.addEventListener('click', () => {
+      const tab = button.getAttribute('data-tab');
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      button.classList.add('active');
+      document.getElementById(tab).classList.add('active');
+    });
+  });
+
+  const tabelaBody = document.querySelector('#tabelaRegistros tbody');
+
+  const filtroArea = document.getElementById('filtroArea');
+  const filtroStatus = document.getElementById('filtroStatus');
+  const filtroSprint = document.getElementById('filtroSprint');
+
+  let registros = [];
+
+  // Formatar data para dd/mm/aaaa
+  function formatarDataBR(dataISO) {
+    if (!dataISO) return '';
+    const d = new Date(dataISO);
+    if (isNaN(d)) return dataISO;
+    return d.toLocaleDateString('pt-BR');
+  }
+
+  function classeStatus(status) {
+    if (!status) return '';
+    const st = status.toLowerCase();
+    if (st.includes('concluída') || st.includes('concluida') || st.includes('finalizada') || st.includes('feito')) {
+      return 'concluida';
+    }
+    if (st.includes('em andamento') || st.includes('andamento')) {
+      return 'em-andamento';
+    }
+    if (st.includes('não iniciado') || st.includes('nao iniciado') || st.includes('pendente')) {
+      return 'nao-iniciado';
+    }
+    return '';
+  }
+
+  function popularFiltros() {
+    const areas = new Set();
+    const statusSet = new Set();
+    const sprints = new Set();
+
+    registros.forEach(r => {
+      if (r.area) areas.add(r.area);
+      if (r.status) statusSet.add(r.status);
+      if (r.sprint) sprints.add(r.sprint);
+    });
+
+    function preencherSelect(select, valores) {
+      select.innerHTML = '<option value="">Todos</option>';
+      Array.from(valores).sort().forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        select.appendChild(opt);
+      });
+    }
+
+    preencherSelect(filtroArea, areas);
+    preencherSelect(filtroStatus, statusSet);
+    preencherSelect(filtroSprint, sprints);
+  }
+
+  function filtrarRegistros() {
+    const areaSelecionada = filtroArea.value;
+    const statusSelecionado = filtroStatus.value;
+    const sprintSelecionada = filtroSprint.value;
+
+    return registros.filter(r => {
+      if (areaSelecionada && r.area !== areaSelecionada) return false;
+      if (statusSelecionado && r.status !== statusSelecionado) return false;
+      if (sprintSelecionada && r.sprint !== sprintSelecionada) return false;
+      return true;
+    });
+  }
+
+  function atualizarTabela() {
+    const filtrados = filtrarRegistros();
+
+    if (filtrados.length === 0) {
+      tabelaBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+      return;
+    }
+
+    tabelaBody.innerHTML = filtrados.map(r => `
+      <tr class="${classeStatus(r.status)}">
+        <td>${r.area || ''}</td>
+        <td class="chamado">${r.chamado || ''}</td>
+        <td>${r.status || ''}</td>
+        <td>${r.sprint || ''}</td>
+        <td>${r.estimativa || ''}</td>
+        <td>${formatarDataBR(r.prazo)}</td>
+        <td>${r.responsavel || ''}</td>
+        <td>${r.aceite || ''}</td>
+      </tr>
+    `).join('');
+  }
+
+  // Métricas
+  function atualizarMetricas() {
+    const filtrados = filtrarRegistros();  // <<< usa só os filtrados
+
+    const totalRegistros = filtrados.length;
+    let totalEstimado = 0;
+    let totalConcluido = 0;
+
+    filtrados.forEach(r => {
+      const est = parseFloat(r.estimativa);
+      if (!isNaN(est)) {
+        totalEstimado += est;
+        if (r.status && r.status.toLowerCase().includes('concluída') || r.status.toLowerCase().includes('concluida')) {
+          totalConcluido += est;
+        }
+      }
+    });
+
+    const totalRestante = totalEstimado - totalConcluido;
+
+    document.getElementById('totalRegistros').textContent = totalRegistros;
+    document.getElementById('totalEstimado').textContent = `${totalEstimado.toFixed(2)} PF`;
+    document.getElementById('totalConcluido').textContent = `${totalConcluido.toFixed(2)} PF`;
+    document.getElementById('totalRestante').textContent = `${totalRestante.toFixed(2)} PF`;
+  }
+  // Gráfico Chart.js
+  let grafico;
+  function atualizarGrafico() {
+  const filtrados = filtrarRegistros();
+
+  if (filtrados.length === 0) {
+    if (grafico) {
+      grafico.destroy();
+      grafico = null;
+    }
+    return;
+  }
+
+  let totalEstimado = 0;
+  let totalConcluido = 0;
+
+  filtrados.forEach(r => {
+    const est = parseFloat(r.estimativa);
+    if (!isNaN(est)) {
+      totalEstimado += est;
+      if (r.status && (r.status.toLowerCase().includes('concluída') || r.status.toLowerCase().includes('concluida'))) {
+        totalConcluido += est;
+      }
+    }
+  });
+
+  const restante = totalEstimado - totalConcluido;
+
+  const labels = ['Concluído', 'Restante'];
+  const data = [totalConcluido, restante];
+
+  if (grafico) grafico.destroy();
+
+  const ctx = document.getElementById('graficoConcluido').getContext('2d');
+  grafico = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: ['#2B5676', '#F7C331'],
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            generateLabels: function(chart) {
+              const dataset = chart.data.datasets[0];
+              const total = dataset.data.reduce((acc, val) => acc + val, 0);
+              return chart.data.labels.map((label, i) => {
+                const value = dataset.data[i];
+                const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
+                return {
+                  text: `${label} - ${percentage}%`,
+                  fillStyle: dataset.backgroundColor[i],
+                  strokeStyle: dataset.backgroundColor[i],
+                  lineWidth: 1,
+                  hidden: false,
+                  index: i
+                };
+              });
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+  async function carregarDados() {
+    try {
+      const resposta = await fetch(WEB_APP_URL);
+      const dados = await resposta.json();
+      if (!Array.isArray(dados)) throw new Error('Formato inválido');
+
+      registros = dados.map(item => ({
+        area: item.Área ?? item.Area ?? item.área ?? '',
+        chamado: item.chamado ?? item.Chamado ?? '',
+        status: item.status ?? item.Status ?? '',
+        sprint: item.sprint ?? item.Sprint ?? '',
+        estimativa: item.estimativa ?? item.Estimativa ?? '0',
+        prazo: item.prazo ?? item.Prazo ?? '',
+        responsavel: item.responsavel ?? item.Responsável ?? item.Responsavel ?? '',
+        aceite: item.aceite ?? item.Aceite ?? ''
+      }));
+
+      popularFiltros();
+      atualizarTabela();
+      atualizarMetricas();
+      atualizarGrafico();
+    } catch (e) {
+      tabelaBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Erro ao carregar dados.</td></tr>';
+      console.error(e);
+    }
+  }
+
+  [filtroArea, filtroStatus, filtroSprint].forEach(el => {
+    el.addEventListener('change', () => {
+      atualizarTabela();
+      atualizarMetricas();
+      atualizarGrafico();
+    });
+  });
+</script>
+
+<script>
+  // Nova URL da próxima sprint
+  const URL_PROXIMA_SPRINT = 'https://script.google.com/macros/s/AKfycbyXyrK2wjSbgrGm5OrlBQTy9p7lP71bwEKdTKCYGKkq/dev';
+
+  // Função para carregar dados da próxima sprint
+  async function carregarProximaSprint() {
+    const tabelaProxBody = document.querySelector('#tabelaProximaSprint tbody');
+    try {
+      const resposta = await fetch(URL_PROXIMA_SPRINT);
+      const dados = await resposta.json();
+
+      if (!Array.isArray(dados) || dados.length === 0) {
+        tabelaProxBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+        return;
+      }
+
+      // Popular filtro sprint da próxima sprint (se fizer sentido)
+      const filtroSprintProx = document.getElementById('filtroSprintProx');
+      const sprintsProx = new Set();
+      dados.forEach(item => {
+        if (item.sprint) sprintsProx.add(item.sprint);
+      });
+      filtroSprintProx.innerHTML = '<option value="">Todas</option>';
+      Array.from(sprintsProx).sort().forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        filtroSprintProx.appendChild(opt);
+      });
+
+      // Função para filtrar dados da próxima sprint pelo filtro sprint
+      function filtrarProxSprint() {
+        const sprintSelecionada = filtroSprintProx.value;
+        return dados.filter(r => !sprintSelecionada || r.sprint === sprintSelecionada);
+      }
+
+      function atualizarTabelaProximaSprint() {
+        const filtrados = filtrarProxSprint();
+        if (filtrados.length === 0) {
+          tabelaProxBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+          return;
+        }
+        tabelaProxBody.innerHTML = filtrados.map(r => `
+          <tr>
+            <td>${r.area ?? r.Área ?? ''}</td>
+            <td>${r.chamado ?? ''}</td>
+            <td>${r.assunto ?? ''}</td>
+            <td>${r.requisitos ?? ''}</td>
+            <td>${r.solicitante ?? ''}</td>
+            <td>${r.status ?? ''}</td>
+          </tr>
+        `).join('');
+      }
+
+      filtroSprintProx.addEventListener('change', atualizarTabelaProximaSprint);
+
+      atualizarTabelaProximaSprint();
+
+    } catch (e) {
+      tabelaProxBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Erro ao carregar dados.</td></tr>';
+      console.error(e);
+    }
+  }
+
+  // Ajuste no atualizarTabela da aba Sprint Atual para coluna aceite vermelha e negrito quando "Não"
+  function atualizarTabela() {
+    const filtrados = filtrarRegistros();
+
+    if (filtrados.length === 0) {
+      tabelaBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+      return;
+    }
+
+    tabelaBody.innerHTML = filtrados.map(r => `
+      <tr class="${classeStatus(r.status)}">
+        <td>${r.area || ''}</td>
+        <td class="chamado">${r.chamado || ''}</td>
+        <td>${r.status || ''}</td>
+        <td>${r.sprint || ''}</td>
+        <td>${r.estimativa || ''}</td>
+        <td>${formatarDataBR(r.prazo)}</td>
+        <td>${r.responsavel || ''}</td>
+        <td class="${r.aceite?.toLowerCase() === 'não' ? 'aceite-nao' : ''}">${r.aceite || ''}</td>
+      </tr>
+    `).join('');
+  }
+
+  // Chamar carregamento da próxima sprint junto com sprint atual
+  carregarDados();
+  carregarProximaSprint();
+</script>
+</body>
+</html>
