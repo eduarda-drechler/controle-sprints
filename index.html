@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Controle de Sprints</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" />
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #fff;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+  }
+
+  .logo-container {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .logo-container img {
+    max-width: 300px;
+    height: auto;
+  }
+
+  h1 {
+    color: #2B5676;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 2rem;
+  }
+
+  .controle-container {
+    max-width: 1000px;
+    margin: 0 auto 40px auto;
+    background: #fafafa;
+    padding: 30px 40px;
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgb(43 86 118 / 0.12);
+  }
+
+  .resumo-metricas {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  .card-metrica {
+    flex: 1 1 220px;
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 5px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(43,86,118,0.08);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .card-metrica:hover {
+    box-shadow:  2px 12px rgba(43,86,118,0.18);
+  }
+
+  .card-metrica h3 {
+    color: #2B5676;
+    margin-bottom: 8px;
+    font-size: 1.1rem;
+  }
+
+  .card-metrica div {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #444;
+  }
+
+  .filtros {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+justify-content: center;
+  }
+
+  .filtros label {
+    color: #2B5676;
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .filtros select {
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1.5px solid #ccc;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    min-width: 140px;
+    transition: border-color 0.2s ease;
+  }
+
+  .filtros select:focus {
+    border-color: #2B5676;
+    outline: none;
+  }
+
+  canvas {
+    display: block;
+    max-width: 350px;
+    margin: 0 auto 40px auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgb(43 86 118 / 0.12);
+    background: #fff;
+  }
+
+  thead {
+    background-color: #2B5676;
+    color: #fff;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 14px 16px;
+    font-size: 1rem;
+    border-bottom: 1px solid #eee;
+  }
+
+  tbody tr.concluida {
+    background: #d4edda;
+  }
+
+  tbody tr.em-andamento {
+    background: #fff3cd;
+  }
+
+  tbody tr.nao-iniciado {
+    background: #f8d7da;
+  }
+
+  tbody tr:hover {
+    background-color: #f1f9ff;
+    cursor: pointer;
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="logo-container">
+    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdzWaiEA5lnbIANMPdfX1fnBdx-5uRSMG0cA&s" alt="Logo Prefeitura" />
+  </div>
+  <h1>Controle de Sprints</h1>
+
+  <div class="controle-container">
+    <canvas id="graficoConcluido"></canvas>
+
+    <div class="resumo-metricas">
+      <div class="card-metrica">
+        <h3>Total de registros</h3>
+        <div id="totalRegistros">0</div>
+      </div>
+      <div class="card-metrica">
+        <h3>Total estimado</h3>
+        <div id="totalEstimado">0 PF</div>
+      </div>
+      <div class="card-metrica">
+        <h3>Concluído</h3>
+        <div id="totalConcluido">0 PF</div>
+      </div>
+      <div class="card-metrica">
+        <h3>Restante</h3>
+        <div id="totalRestante">0 PF</div>
+      </div>
+    </div>
+
+    <div class="filtros">
+      <label for="filtroSprint">Sprint:
+        <select id="filtroSprint"><option value="">Todas</option></select>
+      </label>     
+     <label for="filtroArea">Área:
+        <select id="filtroArea"><option value="">Todas</option></select>
+      </label>
+      <label for="filtroStatus">Status:
+        <select id="filtroStatus"><option value="">Todos</option></select>
+      </label>
+    </div>
+  </div>
+  <table id="tabelaRegistros">
+    <thead>
+      <tr>
+        <th>Área</th>
+        <th class="chamado">Chamado</th>
+        <th>Status</th>
+        <th>Sprint</th>
+        <th>Estimativa</th>
+        <th>Prazo</th>
+        <th>Responsável</th>
+        <th>Aceite</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="8" style="text-align:center;">Carregando dados...</td></tr>
+    </tbody>
+  </table>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+
+
+
+
+<script>
+  const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzWwhGM6Y1a_aDGWyBIwG6tEs0jx3Mfb3QysY9M1y4dUlMEOd5NG5pPcmWcpBHKBkduCg/exec';
+
+  const tabelaBody = document.querySelector('#tabelaRegistros tbody');
+  const somaEstimativaEl = document.getElementById('somaEstimativa');
+
+  // Filtros
+  const filtroArea = document.getElementById('filtroArea');
+  const filtroStatus = document.getElementById('filtroStatus');
+  const filtroSprint = document.getElementById('filtroSprint');
+
+  let registros = [];
+
+  // Função para formatar data dd/mm/aaaa
+  function formatarDataBR(dataISO) {
+    if (!dataISO) return '';
+    const d = new Date(dataISO);
+    if (isNaN(d)) return dataISO;
+    const dia = String(d.getDate()).padStart(2, '0');
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const ano = d.getFullYear();
+    return `${dia}/${mes}/${ano}`;
+  }
+
+  // Função para obter classe CSS da linha conforme status
+  function classeStatus(status) {
+    if (!status) return '';
+    const st = status.toLowerCase();
+    if (st.includes('concluída') || st.includes('concluida') || st.includes('finalizada') || st.includes('feito')) {
+      return 'concluida';
+    } else if (st.includes('em desenvolvimento') || st.includes('em desenvolvimento') || st.includes('em progresso')) {
+      return 'em-andamento';
+    } else if (st.includes('não iniciado') || st.includes('nao iniciado') || st.includes('pendente') || st.includes('não começou') || st.includes('nao começou')) {
+      return 'nao-iniciado';
+    }
+    return '';
+  }
+
+  // Atualiza opções dos filtros com valores únicos
+  function popularFiltros() {
+    function populaSelect(selectEl, valores) {
+      const valoresUnicos = [...new Set(valores)].filter(v => v && v.trim() !== '').sort();
+      // Remove todas opções exceto a primeira
+      selectEl.querySelectorAll('option:not(:first-child)').forEach(opt => opt.remove());
+      valoresUnicos.forEach(v => {
+        const option = document.createElement('option');
+        option.value = v;
+        option.textContent = v;
+        selectEl.appendChild(option);
+      });
+    }
+
+    popularFiltros.popularSelect = popularFiltros.popularSelect || populaSelect;
+
+    popularFiltros.popularSelect(filtroArea, registros.map(r => r.Área));
+    popularFiltros.popularSelect(filtroStatus, registros.map(r => r.Status));
+    popularFiltros.popularSelect(filtroSprint, registros.map(r => r.Sprint));
+  }
+
+  // Aplica filtros e atualiza a tabela
+  function aplicarFiltros() {
+    const areaFiltro = filtroArea.value.toLowerCase();
+    const statusFiltro = filtroStatus.value.toLowerCase();
+    const sprintFiltro = filtroSprint.value.toLowerCase();
+
+    const filtrados = registros.filter(reg => {
+      const areaMatch = areaFiltro ? (reg.Área || '').toLowerCase().includes(areaFiltro) : true;
+      const statusMatch = statusFiltro ? (reg.Status || '').toLowerCase().includes(statusFiltro) : true;
+      const sprintMatch = sprintFiltro ? (reg.Sprint || '').toLowerCase().includes(sprintFiltro) : true;
+      return areaMatch && statusMatch && sprintMatch;
+    });
+
+    atualizarTabela(filtrados);
+  }
+
+  // Atualiza a tabela com os dados fornecidos e soma estimativa
+  function atualizarTabela(dados) {
+    tabelaBody.innerHTML = '';
+
+    if (dados.length === 0) {
+      tabelaBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+      somaEstimativaEl.textContent = 'Estimativa Total: 0 PF';
+      return;
+    }
+
+let somaEstimativa = 0;
+let somaConcluido = 0;
+let totalRegistros = dados.length;
+
+dados.forEach(reg => {
+  const classeLinha = classeStatus(reg.Status);
+  const tr = document.createElement('tr');
+  tr.className = classeLinha;
+  tr.innerHTML = `
+    <td>${reg.Área || ''}</td>
+    <td class="chamado">${reg.Chamado || ''}</td>
+    <td>${reg.Status || ''}</td>
+    <td>${reg.Sprint || ''}</td>
+    <td>${reg.Estimativa || ''}</td>
+    <td>${formatarDataBR(reg.Prazo)}</td>
+    <td>${reg.Responsável || ''}</td>
+    <td>${reg.Aceite || ''}</td>
+  `;
+  tabelaBody.appendChild(tr);
+
+  const est = parseFloat(reg.Estimativa);
+  const status = (reg.Status || '').toLowerCase();
+  if (!isNaN(est)) {
+    somaEstimativa += est;
+
+    if (
+      status.includes('concluída') ||
+      status.includes('concluida') ||
+      status.includes('feito') ||
+      status.includes('finalizada')
+    ) {
+      somaConcluido += est;
+    }
+  }
+});
+
+document.getElementById('totalRegistros').textContent = totalRegistros;
+document.getElementById('totalEstimado').textContent = somaEstimativa.toFixed(1);
+document.getElementById('totalConcluido').textContent = somaConcluido.toFixed(1);
+document.getElementById('totalRestante').textContent = (somaEstimativa - somaConcluido).toFixed(1);
+
+// Atualizar gráfico
+if (window.graficoConcluidoInstance) {
+  window.graficoConcluidoInstance.destroy();
+}
+
+const ctx = document.getElementById('graficoConcluido').getContext('2d');
+window.graficoConcluidoInstance = new Chart(ctx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Concluído', 'Não Concluído'],
+    datasets: [{
+      data: [
+        somaConcluido.toFixed(1),
+        (somaEstimativa - somaConcluido).toFixed(1)
+      ],
+      backgroundColor: ['#28a745', '#e0e0e0'],
+      borderWidth: 1
+    }]
+  },
+  options: {
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const value = parseFloat(context.raw);
+            const percent = ((value / somaEstimativa) * 100).toFixed(1);
+            return `${context.label}: ${value} PF (${percent}%)`;
+          }
+        }
+      },
+      legend: {
+        position: 'bottom'
+      },
+      title: {
+        display: true,
+        text: 'Percentual da Sprint Concluída'
+      }
+    }
+  }
+});
+
+  }
+
+  async function carregarRegistros() {
+    tabelaBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando dados...</td></tr>';
+    try {
+      const response = await fetch(WEB_APP_URL);
+      registros = await response.json();
+
+      if (!Array.isArray(registros) || registros.length === 0) {
+        tabelaBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum registro cadastrado.</td></tr>';
+        somaEstimativaEl.textContent = 'Estimativa Total: 0 PF';
+        return;
+      }
+
+      popularFiltros();
+      aplicarFiltros();
+
+    } catch (error) {
+      tabelaBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red;">Erro ao carregar dados: ${error.message}</td></tr>`;
+      somaEstimativaEl.textContent = 'Estimativa Total: 0 PF';
+      console.error(error);
+    }
+  }
+
+  // Listeners filtros
+  filtroArea.addEventListener('change', aplicarFiltros);
+  filtroStatus.addEventListener('change', aplicarFiltros);
+  filtroSprint.addEventListener('change', aplicarFiltros);
+
+  carregarRegistros();
+</script>
+
+</body>
+</html>
+
